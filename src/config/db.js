@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize';
 import mysql2 from 'mysql2';
 import dotenv from 'dotenv';
 
+
 //Se obtienen las variables de entorno
 dotenv.config();
 
