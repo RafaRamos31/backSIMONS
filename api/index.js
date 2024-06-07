@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { setRoutes } from "./src/config/routes.js";
+import { setRoutes } from "../src/config/routes.js";
 
 //Se inicializa un servidor Express para la navegacion entre rutas al acceder a la API
 const app = express();
