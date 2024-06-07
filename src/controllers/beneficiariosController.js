@@ -5,8 +5,6 @@ import { updateVersion } from '../utils/versionHelper.js';
 import Organizacion from '../models/Organizaciones.js';
 import Departamento from '../models/Departamento.js';
 import Municipio from '../models/Municipio.js';
-import Aldea from '../models/Aldea.js';
-import Caserio from '../models/Caserio.js';
 import Sector from '../models/Sector.js';
 import TipoOrganizacion from '../models/TipoOrganizacion.js';
 import { decodeToken } from '../utils/jwtDecoder.js';
@@ -16,10 +14,9 @@ import { privateGetOrganizacionById } from './organizacionesController.js';
 import { privateGetCargoById } from './cargosController.js';
 import { privateGetDepartamentoById } from './departamentoController.js';
 import { privateGetMunicipioById } from './municipioController.js';
-import { privateGetAldeaById } from './aldeasController.js';
-import { privateGetCaserioById } from './caseriosController.js';
 import { privateGetSectorById } from './sectoresController.js';
 import { privateGetTipoOrganizacionById } from './tiposOrganizacionController.js';
+import sequelize from '../config/db.js';
 
 
 //Internos para validacion de claves unicas
@@ -45,6 +42,72 @@ export async function privateGetBeneficiarioById(idBeneficiario){
     return Beneficiario.findByPk(idBeneficiario);
   } catch (error) {
     throw error;
+  }
+}
+
+//Get reporte
+export const getBeneficiariosReporte = async (req, res) => {
+  try {
+    const auth = decodeToken(req.headers['authorization']);
+    if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al obtener reporte de beneficiarios. ' + auth.payload });
+
+    const { param } = req.body;
+
+    let includeValue = []
+    if(param === 'sectorId'){
+      includeValue = [
+        {
+          model: Sector,
+          attributes: ['id', 'nombre'],
+          as: 'sector'
+        },
+      ]
+    }
+
+    if(param === 'tipoOrganizacionId'){
+      includeValue = [
+        {
+          model: TipoOrganizacion,
+          attributes: ['id', 'nombre'],
+          as: 'tipoOrganizacion'
+        },
+      ]
+    }
+
+    if(param === 'departamentoId'){
+      includeValue = [
+        {
+          model: Departamento,
+          attributes: ['id', 'nombre'],
+          as: 'departamento'
+        },
+      ]
+    }
+
+    if(param === 'municipioId'){
+      includeValue = [
+        {
+          model: Municipio,
+          attributes: ['id', 'nombre'],
+          as: 'municipio'
+        },
+      ]
+    }
+
+    const informe = await Beneficiario.findAll({
+      where: {estado: { [Op.in] : ['Publicado', 'Eliminado']}},
+      attributes: [
+        param,
+        [sequelize.fn('COUNT', sequelize.col(param)), 'cantidad']
+      ],
+      group: param,
+      order: [[sequelize.literal('cantidad'), 'DESC']], // Ordena de mayor a menor cantidad
+      include: includeValue
+    });
+
+    res.json(informe);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener todos las beneficiarios: ' + error });
   }
 }
 
@@ -86,16 +149,6 @@ export const getPagedBeneficiarios = async (req, res) => {
           model: Municipio,
           attributes: ['id', 'nombre'],
           as: 'municipio'
-        },
-        {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
         },
         {
           model: Sector,
@@ -180,16 +233,6 @@ export const getBeneficiarioById = async (req, res) => {
           as: 'municipio'
         },
         {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
-        },
-        {
           model: Sector,
           attributes: ['id', 'nombre'],
           as: 'sector'
@@ -257,16 +300,6 @@ export const getBeneficiarioByDNI = async (req, res) => {
           model: Municipio,
           attributes: ['id', 'nombre'],
           as: 'municipio'
-        },
-        {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
         },
         {
           model: Sector,
@@ -342,16 +375,6 @@ export const getRevisionesBeneficiario = async (req, res) => {
           as: 'municipio'
         },
         {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
-        },
-        {
           model: Sector,
           attributes: ['id', 'nombre'],
           as: 'sector'
@@ -387,7 +410,7 @@ export const createBeneficiario = async (req, res) => {
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al crear Beneficiario. ' + auth.payload });
 
     const { nombre, dni, sexo, fechaNacimiento, telefono, tipoBeneficiario, sectorId, tipoOrganizacionId, organizacionId, cargoId, 
-      departamentoId, municipioId, aldeaId, caserioId, aprobar=false } = req.body;
+      departamentoId, municipioId, procedencia, anotaciones, aprobar=false } = req.body;
 
     const existentDNI = await validateUniquesBeneficiario({dni})
     if(existentDNI) return res.status(400).json({ error: `Error al crear el Beneficiario. El DNI ${dni} ya está en uso.` });
@@ -400,8 +423,6 @@ export const createBeneficiario = async (req, res) => {
     const cargo = await privateGetCargoById(cargoId);
     const departamento = await privateGetDepartamentoById(departamentoId);
     const municipio = await privateGetMunicipioById(municipioId);
-    const aldea = await privateGetAldeaById(aldeaId);
-    const caserio = await privateGetCaserioById(caserioId);
 
     const baseBeneficiario = await Beneficiario.create({ 
       //Propiedades de entidad
@@ -417,8 +438,8 @@ export const createBeneficiario = async (req, res) => {
       cargoId: cargoId.length > 0 ? cargoId : null,
       departamentoId: departamentoId.length > 0 ? departamentoId : null,
       municipioId: municipioId.length > 0 ? municipioId : null,
-      aldeaId: aldeaId.length > 0 ? aldeaId : null,
-      caserioId: caserioId.length > 0 ? caserioId : null,
+      procedencia: procedencia.length > 0 ? procedencia : null,
+      anotaciones: anotaciones.length > 0 ? anotaciones : null,
       //Propiedades de control
       originalId: null,
       version: '0.1',
@@ -448,8 +469,8 @@ export const createBeneficiario = async (req, res) => {
         cargoId: cargoId.length > 0 ? cargoId : null,
         departamentoId: departamentoId.length > 0 ? departamentoId : null,
         municipioId: municipioId.length > 0 ? municipioId : null,
-        aldeaId: aldeaId.length > 0 ? aldeaId : null,
-        caserioId: caserioId.length > 0 ? caserioId : null,
+        procedencia: procedencia.length > 0 ? procedencia : null,
+        anotaciones: anotaciones.length > 0 ? anotaciones : null,
         //Propiedades de control
         originalId: null,
         version: '1.0',
@@ -476,7 +497,7 @@ export const createBeneficiario = async (req, res) => {
       })
     }
 
-    res.status(201).json({...baseBeneficiario.dataValues, sector, tipoOrganizacion, organizacion, cargo, departamento, municipio, aldea, caserio});
+    res.status(201).json({...baseBeneficiario.dataValues, sector, tipoOrganizacion, organizacion, cargo, departamento, municipio});
   } catch (error) {
     res.status(500).json({ error: 'Error al crear beneficiario: ' + error });
   }
@@ -491,7 +512,7 @@ export const editBeneficiario = async (req, res) => {
     const editorId = auth.payload.userId;
 
     const { idBeneficiario, nombre, dni, sexo, fechaNacimiento, telefono, tipoBeneficiario, sectorId, tipoOrganizacionId, organizacionId, cargoId, 
-      departamentoId, municipioId, aldeaId, caserioId, aprobar=false } = req.body;
+      departamentoId, municipioId, procedencia, anotaciones, aprobar=false } = req.body;
     
     const existentDNI = await validateUniquesBeneficiario({dni, id: idBeneficiario})
     if(existentDNI) return res.status(400).json({ error: `Error al crear el Beneficiario. El DNI ${dni} ya está en uso.` });
@@ -507,8 +528,6 @@ export const editBeneficiario = async (req, res) => {
     const cargo = await privateGetCargoById(cargoId);
     const departamento = await privateGetDepartamentoById(departamentoId);
     const municipio = await privateGetMunicipioById(municipioId);
-    const aldea = await privateGetAldeaById(aldeaId);
-    const caserio = await privateGetCaserioById(caserioId);
 
     const baseBeneficiario = await Beneficiario.create({ 
       //Propiedades de entidad
@@ -524,11 +543,11 @@ export const editBeneficiario = async (req, res) => {
       cargoId: cargoId.length > 0 ? cargoId : null,
       departamentoId: departamentoId.length > 0 ? departamentoId : null,
       municipioId: municipioId.length > 0 ? municipioId : null,
-      aldeaId: aldeaId.length > 0 ? aldeaId : null,
-      caserioId: caserioId.length > 0 ? caserioId : null,
+      procedencia: procedencia.length > 0 ? procedencia : null,
+      anotaciones: anotaciones.length > 0 ? anotaciones : null,
       //Propiedades de control
       originalId: beneficiario.id,
-      version: updateVersion(beneficiario.ultimaRevision),
+      version: updateVersion(beneficiario.ultimaRevision || '1.0'),
       estado: aprobarValue ? 'Validado' : 'En revisión',
       editorId,
       fechaEdicion: new Date(),
@@ -553,8 +572,8 @@ export const editBeneficiario = async (req, res) => {
         cargoId: cargoId.length > 0 ? cargoId : null,
         departamentoId: departamentoId.length > 0 ? departamentoId : null,
         municipioId: municipioId.length > 0 ? municipioId : null,
-        aldeaId: aldeaId.length > 0 ? aldeaId : null,
-        caserioId: caserioId.length > 0 ? caserioId : null,
+        procedencia: procedencia.length > 0 ? procedencia : null,
+        anotaciones: anotaciones.length > 0 ? anotaciones : null,
         //Propiedades de control
         version: updateVersion(beneficiario.version, aprobarValue),
         ultimaRevision: updateVersion(beneficiario.version, aprobarValue),
@@ -571,7 +590,7 @@ export const editBeneficiario = async (req, res) => {
       })
     }
 
-    res.status(201).json({...baseBeneficiario.dataValues, sector, tipoOrganizacion, organizacion, cargo, departamento, municipio, aldea, caserio});
+    res.status(201).json({...baseBeneficiario.dataValues, sector, tipoOrganizacion, organizacion, cargo, departamento, municipio});
   } catch (error) {
     res.status(500).json({ error: 'Error al editar beneficiario: ' + error });
   }
@@ -620,8 +639,8 @@ export const reviewBeneficiario = async (req, res) => {
         cargoId: updateRev.cargoId,
         departamentoId: updateRev.departamentoId,
         municipioId: updateRev.municipioId,
-        aldeaId: updateRev.aldeaId,
-        caserioId: updateRev.caserioId,
+        procedencia: updateRev.procedencia,
+        anotaciones: updateRev.anotaciones,
         //Propiedades de control
         version: updateVersion(original.version, true),
         ultimaRevision: updateVersion(original.version, true),
@@ -646,8 +665,8 @@ export const reviewBeneficiario = async (req, res) => {
         cargoId: updateRev.cargoId,
         departamentoId: updateRev.departamentoId,
         municipioId: updateRev.municipioId,
-        aldeaId: updateRev.aldeaId,
-        caserioId: updateRev.caserioId,
+        procedencia: updateRev.procedencia,
+        anotaciones: updateRev.anotaciones,
         //Propiedades de control
         originalId: null,
         version: '1.0',

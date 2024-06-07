@@ -3,7 +3,7 @@ import { decodeToken } from '../utils/jwtDecoder.js';
 import Tarea from '../models/Tarea.js';
 import Evento from '../models/Evento.js';
 import { deleteComponentesEvento, getComponentesEvento, uploadComponentesEvento } from './componentesEventoController.js';
-import { deleteColaboradoresEvento, getColaboradoresEvento, uploadColaboradoresEvento } from './colaboradoresEventoController.js';
+import { deleteColaboradoresEvento, getColaboradoresEvento, getEventosByColaborador, uploadColaboradoresEvento } from './colaboradoresEventoController.js';
 import moment from 'moment';
 import { deleteSectoresEvento, getSectoresEvento, uploadSectoresEvento } from './sectoresEventoController.js';
 import { deleteNivelesEvento, getNivelesEvento, uploadNivelesEvento } from './nivelesEventoController.js';
@@ -25,7 +25,25 @@ import { sumarProgresos } from './progresosIndicadoresController.js';
 //Get internal
 export async function privateGetEventoById(idEvento){
   try {
-    return Evento.findByPk(idEvento);
+    return Evento.findByPk(idEvento, {
+      include: [
+        {
+          model: Usuario,
+          attributes: ['id', 'nombre'],
+          as: 'organizador'
+        },
+        {
+          model: Tarea,
+          attributes: ['id', 'nombre', 'titulo'],
+          as: 'tarea'
+        },
+        {
+          model: Municipio,
+          attributes: ['id', 'nombre'],
+          as: 'municipio'
+        },
+      ]
+    });
   } catch (error) {
     throw error;
   }
@@ -90,7 +108,7 @@ export const getPagedEventosConsolidar = async (req, res) => {
     const eventos = (await Evento.findAndCountAll({
       limit: Number(pageSize),
       offset: Number(page) * Number(pageSize),
-      where: getFilter({filterParams: JSON.parse(filter), digitar:true}),
+      where: getFilter({filterParams: JSON.parse(filter), consolidar:true}),
       order: getSorting({sort: JSON.parse(sort), defaultSort: ['fechaCreacion', 'DESC'], reviews: JSON.parse(reviews)}),
       include: [
         {
@@ -125,7 +143,7 @@ export const getEventosTablero = async (req, res) => {
     const auth = decodeToken(req.headers['authorization']);
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al obtener eventos. ' + auth.payload });
 
-    const eventos = await Evento.findAll({
+    const eventosComponente = await Evento.findAll({
       attributes: ['id', 'tareaId', 'componenteEncargadoId', 'quarterId', 'areaTematicaId', 'departamentoId', 'municipioId', 'aldeaId', 'caserioId',
       'nombre', 'fechaInicio', 'fechaFinal', 'estadoRealizacion', 'estadoRevisionFinalizacion'],
       where: {
@@ -151,6 +169,14 @@ export const getEventosTablero = async (req, res) => {
       ]
     });
 
+    let eventosColaboracion = [];
+
+    if(componenteId == auth.payload.userComponente.id){
+      const listColaboraciones = await getEventosByColaborador(auth.payload.userId)
+      eventosColaboracion = await getEventosColaborador(listColaboraciones)
+    }
+    
+    const eventos = eventosComponente.concat(eventosColaboracion)
     const populatedEventos = await populateArrays(eventos)
 
     res.json(populatedEventos);
@@ -159,6 +185,16 @@ export const getEventosTablero = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener eventos: ' + error });
   }
 }
+
+const getEventosColaborador = async (eventosList) => {
+  const eventosArray = [];
+  for(let eventColaborador of eventosList){
+    const evento = await privateGetEventoById(eventColaborador.eventoId)
+    eventosArray.push(evento)
+  }
+  return eventosArray;
+}
+
 
 const populateArrays = async (eventos) => {
   const eventosArray = [];
@@ -475,7 +511,7 @@ export const editEvento = async (req, res) => {
 //Finalizar
 export const finalizarEvento = async (req, res) => {
   const { idEvento, numeroFormulario, participantesHombres, participantesMujeres, participantesComunitarios, participantesInstitucionales, 
-    totalDias, totalHoras, tipoEventoId, sectores, niveles, logros, compromisos, enlaceFormulario, enlaceFotografias } = req.body;
+    totalDias, totalHoras, tipoEventoId, sectores, niveles, logros, compromisos, enlaceFormulario, enlaceFotografias, anotaciones } = req.body;
   try {
     const auth = decodeToken(req.headers['authorization']);
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al crear Evento. ' + auth.payload });
@@ -499,6 +535,7 @@ export const finalizarEvento = async (req, res) => {
       compromisos,
       enlaceFormulario,
       enlaceFotografias,
+      anotaciones,
       fechaFinalizacionEvento: new Date(),
       responsableFinalizacionId,
       estadoRealizacion: 'Finalizado',
@@ -521,7 +558,7 @@ export const finalizarEvento = async (req, res) => {
 //EditFinalizar
 export const editFinalizarEvento = async (req, res) => {
   const { idEvento, numeroFormulario, participantesHombres, participantesMujeres, participantesComunitarios, participantesInstitucionales, 
-    totalDias, totalHoras, tipoEventoId, sectores, niveles, logros, compromisos, enlaceFormulario, enlaceFotografias } = req.body;
+    totalDias, totalHoras, tipoEventoId, sectores, niveles, logros, compromisos, enlaceFormulario, enlaceFotografias, anotaciones } = req.body;
   try {
     const auth = decodeToken(req.headers['authorization']);
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al crear Evento. ' + auth.payload });
@@ -545,9 +582,13 @@ export const editFinalizarEvento = async (req, res) => {
       compromisos,
       enlaceFormulario,
       enlaceFotografias,
+      anotaciones,
       fechaFinalizacionEvento: new Date(),
       responsableFinalizacionId,
       estadoRealizacion: 'Finalizado',
+      estadoDigitacion: 'Pendiente',
+      responsableDigitacionId: null,
+      fechaDigitacion: null,
       estadoRevisionFinalizacion: 'Pendiente',
       revisorFinalizacionId: null,
       fechaRevisionFinalizacion: null,
@@ -585,6 +626,7 @@ export const reportarEvento = async (req, res) => {
       //Propiedades de entidad
       revisorFinalizacionId,
       estadoRevisionFinalizacion: 'Rechazado',
+      estadoDigitacion: 'Rechazado',
       observacionesFinalizacion: observaciones,
       fechaRevisionFinalizacion: new Date(),
     });

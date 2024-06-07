@@ -1,7 +1,5 @@
-import Aldea from '../models/Aldea.js';
 import Beneficiario from '../models/Beneficiario.js';
 import Cargo from '../models/Cargo.js';
-import Caserio from '../models/Caserio.js';
 import Departamento from '../models/Departamento.js';
 import Municipio from '../models/Municipio.js';
 import Organizacion from '../models/Organizaciones.js';
@@ -30,16 +28,6 @@ export const getParticipantesEvento = async (eventoId) => {
               model: Municipio,
               attributes: ['id', 'nombre'],
               as: 'municipio'
-            },
-            {
-              model: Aldea,
-              attributes: ['id', 'nombre'],
-              as: 'aldea'
-            },
-            {
-              model: Caserio,
-              attributes: ['id', 'nombre'],
-              as: 'caserio'
             },
             {
               model: Sector,

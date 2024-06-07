@@ -126,15 +126,15 @@ export const getPagedTareas = async (req, res) => {
 //Get list
 export const getTareasList = async (req, res) => {
   try {
-    const { filter='{}' } = req.body;
+    const { filter='{}', quarterId=null } = req.body;
 
     const auth = decodeToken(req.headers['authorization']);
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al obtener tareas. ' + auth.payload });
 
     const tareas = await Tarea.findAll({
-      attributes: ['id', 'nombre', 'descripcion'],
+      attributes: ['id', 'nombre', 'titulo', 'eventosEstimados', 'eventosRealizados'],
       order: getSorting({defaultSort: ['nombre', 'ASC']}),
-      where: getFilter({filterParams: JSON.parse(filter)}),
+      where: getFilter({filterParams: JSON.parse(filter), quarterId: quarterId}),
       include: [
         {
           model: Quarter,

@@ -146,6 +146,9 @@ Evento.init(
     enlaceFotografias: {
       type: DataTypes.STRING,
     },
+    anotaciones: {
+      type: DataTypes.STRING,
+    },
     estadoRealizacion: {
       type: DataTypes.STRING,
     },

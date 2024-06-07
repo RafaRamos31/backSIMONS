@@ -24,6 +24,23 @@ export const getColaboradoresEvento = async (eventoId) => {
   }
 }
 
+export const getEventosByColaborador = async (colaboradorId) => {
+  try {
+    const eventos = await ColaboradorEvento.findAll({
+      where: {
+        colaboradorId: colaboradorId
+      },
+      attributes: ['eventoId', 'colaboradorId']
+    })
+
+    return eventos.map(evento => evento.dataValues);
+
+  } catch (error) {
+    throw error
+  }
+}
+
+
 
 export async function uploadColaboradoresEvento(eventoId, colaboradores){
   try {

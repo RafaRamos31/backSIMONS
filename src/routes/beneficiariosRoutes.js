@@ -1,9 +1,12 @@
 import express from "express";
 import multer from "multer";
-import { createBeneficiario, editBeneficiario, getBeneficiarioByDNI, getBeneficiarioById, getBeneficiariosList, getPagedBeneficiarios, getRevisionesBeneficiario, hideBeneficiario, reviewBeneficiario } from "../controllers/beneficiariosController.js";
+import { createBeneficiario, editBeneficiario, getBeneficiarioByDNI, getBeneficiarioById, getBeneficiariosList, getBeneficiariosReporte, getPagedBeneficiarios, getRevisionesBeneficiario, hideBeneficiario, reviewBeneficiario } from "../controllers/beneficiariosController.js";
 
 const upload = new multer();
 const beneficiariosRouter = express.Router();
+
+//Get Reporte
+beneficiariosRouter.post('/reporte', upload.any(), getBeneficiariosReporte);
 
 //Get Paged
 beneficiariosRouter.post('/paged', upload.any(), getPagedBeneficiarios);

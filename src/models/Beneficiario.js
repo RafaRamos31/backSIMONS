@@ -5,8 +5,6 @@ import Sector from './Sector.js';
 import TipoOrganizacion from './TipoOrganizacion.js';
 import Departamento from './Departamento.js';
 import Municipio from './Municipio.js';
-import Aldea from './Aldea.js';
-import Caserio from './Caserio.js';
 import Organizacion from './Organizaciones.js';
 import Cargo from './Cargo.js';
 
@@ -79,19 +77,11 @@ Beneficiario.init(
         key: 'id'
       }
     },
-    aldeaId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Aldea,
-        key: 'id'
-      }
+    procedencia: {
+      type: DataTypes.STRING,
     },
-    caserioId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Caserio,
-        key: 'id'
-      }
+    anotaciones: {
+      type: DataTypes.STRING,
     },
     originalId: {
       type: DataTypes.INTEGER,
@@ -165,8 +155,6 @@ Beneficiario.belongsTo(Organizacion, { as: 'organizacion', foreignKey: 'organiza
 Beneficiario.belongsTo(Cargo, { as: 'cargo', foreignKey: 'cargoId' });
 Beneficiario.belongsTo(Departamento, { as: 'departamento', foreignKey: 'departamentoId' });
 Beneficiario.belongsTo(Municipio, { as: 'municipio', foreignKey: 'municipioId' });
-Beneficiario.belongsTo(Aldea, { as: 'aldea', foreignKey: 'aldeaId' });
-Beneficiario.belongsTo(Caserio, { as: 'caserio', foreignKey: 'caserioId' });
 Beneficiario.belongsTo(Beneficiario, {foreignKey: 'originalId'});
 Beneficiario.belongsTo(Usuario, { as: 'editor', foreignKey: 'editorId' });
 Beneficiario.belongsTo(Usuario, { as: 'revisor', foreignKey: 'revisorId' });

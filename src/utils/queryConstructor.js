@@ -1,9 +1,9 @@
 import { Op } from 'sequelize';
 
-export const getFilter = ({filterParams, reviews=false, deleteds=false, digitar=false, componenteId=null}) => {
+export const getFilter = ({filterParams, reviews=false, deleteds=false, digitar=false, consolidar=false, componenteId=null, quarterId=null}) => {
 
   let filter = {}
-  if(!digitar){
+  if(!digitar && !consolidar){
     if(reviews){
       filter = {estado: { [Op.in] : ['En revisión', 'Validado', 'Rechazado']}}
     }
@@ -15,11 +15,20 @@ export const getFilter = ({filterParams, reviews=false, deleteds=false, digitar=
     }
   }
   else{
-    filter = {estadoDigitacion: { [Op.in]: ['Pendiente', 'Finalizado', 'En Curso']}}
+    if(digitar){
+      filter = {estadoDigitacion: { [Op.in]: ['Pendiente', 'Finalizado', 'Rechazado', 'En Curso']}}
+    }
+    if(consolidar){
+      filter = {estadoConsolidado: { [Op.in]: ['Pendiente', 'Finalizado']}}
+    }
   }
 
   if(componenteId){
     filter['componenteId'] = componenteId
+  }
+
+  if(quarterId){
+    filter['quarterId'] = quarterId
   }
   
   if(filterParams.value){

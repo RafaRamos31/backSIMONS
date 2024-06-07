@@ -20,13 +20,10 @@ eventosRouter.get('/participantes/:id', upload.any(), getEventoParticipantesById
 //Get individual participantes
 eventosRouter.get('/consolidar/:id', upload.any(), getEventoConsolidarById);
 
-//Get individual finalizar
-eventosRouter.put('/reportar', upload.any(), reportarEvento);
-
 //Get digitar
 eventosRouter.post('/paged/digitar', upload.any(), getPagedEventosDigitar);
 
-//Get digitar
+//Get consolidar
 eventosRouter.post('/paged/consolidar', upload.any(), getPagedEventosConsolidar);
 
 //Create inicial
@@ -40,6 +37,9 @@ eventosRouter.post('/finalizar', upload.any(), finalizarEvento);
 
 //Editar Finalizar
 eventosRouter.put('/finalizar', upload.any(), editFinalizarEvento);
+
+//Put reportar
+eventosRouter.put('/reportar', upload.any(), reportarEvento);
 
 //Digitalizar
 eventosRouter.post('/digitalizar', upload.any(), participantesEvento);
