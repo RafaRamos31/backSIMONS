@@ -5,9 +5,6 @@ import Sector from './Sector.js';
 import TipoOrganizacion from './TipoOrganizacion.js';
 import Departamento from './Departamento.js';
 import Municipio from './Municipio.js';
-import Aldea from './Aldea.js';
-import Caserio from './Caserio.js';
-import Nivel from './Nivel.js';
 
 class Organizacion extends Model {}
 
@@ -39,12 +36,8 @@ Organizacion.init(
         key: 'id'
       },
     },
-    nivelId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Nivel,
-        key: 'id'
-      }
+    tipoSector: {
+      type: DataTypes.STRING,
     },
     telefono: {
       type: DataTypes.STRING,
@@ -60,20 +53,6 @@ Organizacion.init(
       type: DataTypes.INTEGER,
       references: {
         model: Municipio,
-        key: 'id'
-      }
-    },
-    aldeaId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Aldea,
-        key: 'id'
-      }
-    },
-    caserioId: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Caserio,
         key: 'id'
       }
     },
@@ -155,11 +134,8 @@ Organizacion.init(
 
 Organizacion.belongsTo(Sector, { as: 'sector', foreignKey: 'sectorId' });
 Organizacion.belongsTo(TipoOrganizacion, { as: 'tipoOrganizacion', foreignKey: 'tipoOrganizacionId' });
-Organizacion.belongsTo(Nivel, { as: 'nivel', foreignKey: 'nivelId' });
 Organizacion.belongsTo(Departamento, { as: 'departamento', foreignKey: 'departamentoId' });
 Organizacion.belongsTo(Municipio, { as: 'municipio', foreignKey: 'municipioId' });
-Organizacion.belongsTo(Aldea, { as: 'aldea', foreignKey: 'aldeaId' });
-Organizacion.belongsTo(Caserio, { as: 'caserio', foreignKey: 'caserioId' });
 Organizacion.belongsTo(Organizacion, {foreignKey: 'originalId'});
 Organizacion.belongsTo(Usuario, { as: 'editor', foreignKey: 'editorId' });
 Organizacion.belongsTo(Usuario, { as: 'revisor', foreignKey: 'revisorId' });

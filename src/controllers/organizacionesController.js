@@ -5,13 +5,26 @@ import { updateVersion } from '../utils/versionHelper.js';
 import Organizacion from '../models/Organizaciones.js';
 import Departamento from '../models/Departamento.js';
 import Municipio from '../models/Municipio.js';
-import Aldea from '../models/Aldea.js';
-import Caserio from '../models/Caserio.js';
 import Sector from '../models/Sector.js';
 import TipoOrganizacion from '../models/TipoOrganizacion.js';
 import { decodeToken } from '../utils/jwtDecoder.js';
-import Nivel from '../models/Nivel.js';
 
+//Internos para validacion de claves unicas
+async function validateUniquesOrganizacion({id=null, codigo = null}){
+  let filter = {estado: { [Op.in] : ['Publicado', 'Eliminado']}}
+
+  if(id){
+    filter = {...filter, id: {[Op.not]: id }}
+  }
+
+  if(codigo){
+    filter = {...filter, codigo: codigo}
+  }
+
+  return Organizacion.findOne({
+    where: filter
+  });
+}
 
 //Get internal
 export async function privateGetOrganizacionById(idOrganizacion){
@@ -62,16 +75,6 @@ export const getPagedOrganizaciones = async (req, res) => {
           as: 'municipio'
         },
         {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
-        },
-        {
           model: Sector,
           attributes: ['id', 'nombre'],
           as: 'sector'
@@ -80,12 +83,7 @@ export const getPagedOrganizaciones = async (req, res) => {
           model: TipoOrganizacion,
           attributes: ['id', 'nombre'],
           as: 'tipoOrganizacion'
-        },
-        {
-          model: Nivel,
-          attributes: ['id', 'nombre'],
-          as: 'nivel'
-        },
+        }
     ]}));
     res.json(organizaciones);
   } catch (error) {
@@ -148,16 +146,6 @@ export const getOrganizacionById = async (req, res) => {
           as: 'municipio'
         },
         {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
-        },
-        {
           model: Sector,
           attributes: ['id', 'nombre'],
           as: 'sector'
@@ -166,12 +154,7 @@ export const getOrganizacionById = async (req, res) => {
           model: TipoOrganizacion,
           attributes: ['id', 'nombre'],
           as: 'tipoOrganizacion'
-        },
-        {
-          model: Nivel,
-          attributes: ['id', 'nombre'],
-          as: 'nivel'
-        },
+        }
     ]});
 
     if (organizacion) {
@@ -225,16 +208,6 @@ export const getRevisionesOrganizacion = async (req, res) => {
           as: 'municipio'
         },
         {
-          model: Aldea,
-          attributes: ['id', 'nombre'],
-          as: 'aldea'
-        },
-        {
-          model: Caserio,
-          attributes: ['id', 'nombre'],
-          as: 'caserio'
-        },
-        {
           model: Sector,
           attributes: ['id', 'nombre'],
           as: 'sector'
@@ -243,12 +216,7 @@ export const getRevisionesOrganizacion = async (req, res) => {
           model: TipoOrganizacion,
           attributes: ['id', 'nombre'],
           as: 'tipoOrganizacion'
-        },
-        {
-          model: Nivel,
-          attributes: ['id', 'nombre'],
-          as: 'nivel'
-        },
+        }
     ]})
 
     res.json(revisiones);
@@ -260,12 +228,15 @@ export const getRevisionesOrganizacion = async (req, res) => {
 
 //Create
 export const createOrganizacion = async (req, res) => {
-  const { nombre, codigo, sectorId, tipoOrganizacionId, nivelId, telefono, departamentoId, municipioId, aldeaId,
-  caserioId, nombreContacto, telefonoContacto, correoContacto, aprobar=false } = req.body;
+  const { nombre, codigo, sectorId, tipoOrganizacionId, tipoSector, telefono, departamentoId, municipioId, 
+    nombreContacto, telefonoContacto, correoContacto, aprobar=false } = req.body;
   try {
 
     const auth = decodeToken(req.headers['authorization']);
     if(auth.code !== 200) return res.status(auth.code).json({ error: 'Error al crear Organizacion. ' + auth.payload });
+
+    const existentCode = await validateUniquesOrganizacion({codigo})
+    if(existentCode) return res.status(400).json({ error: `Error al crear la Organización. El código ${codigo} ya está en uso.` });
 
     const editorId = auth.payload.userId;
 
@@ -275,12 +246,10 @@ export const createOrganizacion = async (req, res) => {
       codigo: codigo.length > 0 ? codigo : null,
       sectorId: sectorId.length > 0 ? sectorId : null,
       tipoOrganizacionId: tipoOrganizacionId.length > 0 ? tipoOrganizacionId : null,
-      nivelId: nivelId.length > 0 ? nivelId : null,
+      tipoSector: tipoSector.length > 0 ? tipoSector : null,
       telefono: telefono.length > 0 ? telefono : null,
       departamentoId: departamentoId.length > 0 ? departamentoId : null,
       municipioId: municipioId.length > 0 ? municipioId : null,
-      aldeaId: aldeaId.length > 0 ? aldeaId : null,
-      caserioId: caserioId.length > 0 ? caserioId : null,
       nombreContacto: nombreContacto.length > 0 ? nombreContacto : null,
       telefonoContacto: telefonoContacto.length > 0 ? telefonoContacto : null,
       correoContacto: correoContacto.length > 0 ? correoContacto : null,
@@ -305,12 +274,10 @@ export const createOrganizacion = async (req, res) => {
         codigo: codigo.length > 0 ? codigo : null,
         sectorId: sectorId.length > 0 ? sectorId : null,
         tipoOrganizacionId: tipoOrganizacionId.length > 0 ? tipoOrganizacionId : null,
-        nivelId: nivelId.length > 0 ? nivelId : null,
+        tipoSector: tipoSector.length > 0 ? tipoSector : null,
         telefono: telefono.length > 0 ? telefono : null,
         departamentoId: departamentoId.length > 0 ? departamentoId : null,
         municipioId: municipioId.length > 0 ? municipioId : null,
-        aldeaId: aldeaId.length > 0 ? aldeaId : null,
-        caserioId: caserioId.length > 0 ? caserioId : null,
         nombreContacto: nombreContacto.length > 0 ? nombreContacto : null,
         telefonoContacto: telefonoContacto.length > 0 ? telefonoContacto : null,
         correoContacto: correoContacto.length > 0 ? correoContacto : null,
@@ -354,8 +321,11 @@ export const editOrganizacion = async (req, res) => {
 
     const editorId = auth.payload.userId;
 
-    const { idOrganizacion, nombre, codigo, sectorId, tipoOrganizacionId, nivelId, telefono, departamentoId, municipioId, aldeaId,
-    caserioId, nombreContacto, telefonoContacto, correoContacto, aprobar=false } = req.body;
+    const { idOrganizacion, nombre, codigo, sectorId, tipoOrganizacionId, tipoSector, telefono, departamentoId, municipioId, 
+      nombreContacto, telefonoContacto, correoContacto, aprobar=false } = req.body;
+
+    const existentCode = await validateUniquesOrganizacion({codigo, id: idOrganizacion})
+    if(existentCode) return res.status(400).json({ error: `Error al crear la Organización. El código ${codigo} ya está en uso.` });
   
     const aprobarValue = JSON.parse(aprobar);
 
@@ -368,12 +338,10 @@ export const editOrganizacion = async (req, res) => {
       codigo: codigo.length > 0 ? codigo : null,
       sectorId: sectorId.length > 0 ? sectorId : null,
       tipoOrganizacionId: tipoOrganizacionId.length > 0 ? tipoOrganizacionId : null,
-      nivelId: nivelId.length > 0 ? nivelId : null,
+      tipoSector: tipoSector.length > 0 ? tipoSector : null,
       telefono: telefono.length > 0 ? telefono : null,
       departamentoId: departamentoId.length > 0 ? departamentoId : null,
       municipioId: municipioId.length > 0 ? municipioId : null,
-      aldeaId: aldeaId.length > 0 ? aldeaId : null,
-      caserioId: caserioId.length > 0 ? caserioId : null,
       nombreContacto: nombreContacto.length > 0 ? nombreContacto : null,
       telefonoContacto: telefonoContacto.length > 0 ? telefonoContacto : null,
       correoContacto: correoContacto.length > 0 ? correoContacto : null,
@@ -396,12 +364,10 @@ export const editOrganizacion = async (req, res) => {
         codigo: codigo.length > 0 ? codigo : null,
         sectorId: sectorId.length > 0 ? sectorId : null,
         tipoOrganizacionId: tipoOrganizacionId.length > 0 ? tipoOrganizacionId : null,
-        nivelId: nivelId.length > 0 ? nivelId : null,
+        tipoSector: tipoSector.length > 0 ? tipoSector : null,
         telefono: telefono.length > 0 ? telefono : null,
         departamentoId: departamentoId.length > 0 ? departamentoId : null,
         municipioId: municipioId.length > 0 ? municipioId : null,
-        aldeaId: aldeaId.length > 0 ? aldeaId : null,
-        caserioId: caserioId.length > 0 ? caserioId : null,
         nombreContacto: nombreContacto.length > 0 ? nombreContacto : null,
         telefonoContacto: telefonoContacto.length > 0 ? telefonoContacto : null,
         correoContacto: correoContacto.length > 0 ? correoContacto : null,
@@ -462,12 +428,10 @@ export const reviewOrganizacion = async (req, res) => {
         codigo: updateRev.codigo,
         sectorId: updateRev.sectorId,
         tipoOrganizacionId: updateRev.tipoOrganizacionId,
-        nivelId: updateRev.nivelId,
+        tipoSector: updateRev.tipoSector,
         telefono: updateRev.telefono,
         departamentoId: updateRev.departamentoId,
         municipioId: updateRev.municipioId,
-        aldeaId: updateRev.aldeaId,
-        caserioId: updateRev.caserioId,
         nombreContacto: updateRev.nombreContacto,
         telefonoContacto: updateRev.telefonoContacto,
         correoContacto: updateRev.correoContacto,
@@ -487,12 +451,10 @@ export const reviewOrganizacion = async (req, res) => {
         codigo: updateRev.codigo,
         sectorId: updateRev.sectorId,
         tipoOrganizacionId: updateRev.tipoOrganizacionId,
-        nivelId: updateRev.nivelId,
+        tipoSector: updateRev.tipoSector,
         telefono: updateRev.telefono,
         departamentoId: updateRev.departamentoId,
         municipioId: updateRev.municipioId,
-        aldeaId: updateRev.aldeaId,
-        caserioId: updateRev.caserioId,
         nombreContacto: updateRev.nombreContacto,
         telefonoContacto: updateRev.telefonoContacto,
         correoContacto: updateRev.correoContacto,
